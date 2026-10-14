@@ -68,6 +68,38 @@ class TextLoader:
             raise DocumentReadError(p, f"Failed to read document: {exc}") from exc
 
 
+class MockLoader:
+    """Second DocumentLoader implementation: returns fixed content, never touches disk.
+
+    It does not inherit from DocumentLoader or TextLoader. It satisfies the
+    protocol structurally by having the same members, so IngestionService
+    accepts it unchanged.
+    """
+
+    supported_extensions: ClassVar[tuple[str, ...]] = ()  # accepts any path
+
+    def __init__(self, content: str = "mock document content") -> None:
+        self.content = content
+        self.calls: list[Path] = []  # records which paths were requested
+
+    def supports(self, path: str | Path) -> bool:
+        return True
+
+    def load(self, path: str | Path) -> str:
+        self.calls.append(Path(path))
+        return self.content
+
+
 if __name__ == "__main__":
-    loader: DocumentLoader = TextLoader()   # type checker verifies conformance
-    print(isinstance(loader, DocumentLoader))  # True, thanks to @runtime_checkable
+    loaders: list[DocumentLoader] = [   # type checker verifies each conforms
+        TextLoader(),
+        MockLoader("fixed content"),
+    ]
+
+    for loader in loaders:
+        # True for both, thanks to @runtime_checkable
+        print(f"{type(loader).__name__}: {isinstance(loader, DocumentLoader)}")
+
+    mock = MockLoader("fixed content")
+    print(mock.load("any/path.pdf"))   # -> fixed content (no file needed)
+    print(mock.calls)                  # -> [PosixPath('any/path.pdf')]

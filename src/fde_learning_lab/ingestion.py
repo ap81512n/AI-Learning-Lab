@@ -6,11 +6,13 @@ All Pydantic models come from models.py; this module only holds behavior.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Iterable
+from typing import ClassVar, Iterable
 
 from fde_learning_lab.exceptions import DocumentError
 from fde_learning_lab.loaders import DocumentLoader
 from fde_learning_lab.models import IngestedDocument, IngestionFailure, IngestionResult
+
+
 
 
 class IngestionService:
@@ -42,15 +44,20 @@ class IngestionService:
 
 
 if __name__ == "__main__":
-    from loaders import TextLoader
+    from fde_learning_lab.loaders import TextLoader
 
-    service = IngestionService(TextLoader())
-    outcome = service.ingest_many(["notes.txt", "missing.txt", "report.pdf"])
-    for doc in outcome.documents:
-        print(f"OK   {doc.path} ({doc.char_count} chars)")
-    for f in outcome.failures:
-        print(f"FAIL {f.path}: {f.error_type}: {f.message}")
+    paths = ["notes.txt", "missing.txt", "report.pdf"]
 
-    payload = outcome.model_dump_json(indent=2)
-    print(payload)
-    assert IngestionResult.model_validate_json(payload) == outcome  # round-trip
+    # Same service class, same calling code -- only the injected loader differs.
+    for loader in (TextLoader(), MockLoader("hello from the mock")):
+        service = IngestionService(loader)
+        outcome = service.ingest_many(paths)
+
+        print(f"\n=== {type(loader).__name__} ===")
+        for doc in outcome.documents:
+            print(f"OK   {doc.path} ({doc.char_count} chars)")
+        for f in outcome.failures:
+            print(f"FAIL {f.path}: {f.error_type}: {f.message}")
+
+        payload = outcome.model_dump_json()
+        assert IngestionResult.model_validate_json(payload) == outcome  # round-trip
