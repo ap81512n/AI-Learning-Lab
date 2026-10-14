@@ -1,12 +1,16 @@
-
 from __future__ import annotations
+
+from pathlib import Path
 
 from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    computed_field,
     model_validator,
 )
+
+from fde_learning_lab.exceptions import DocumentError
 
 
 class DocumentMetadata(BaseModel):
@@ -53,3 +57,57 @@ class IngestionRequest(BaseModel):
                 "chunk_overlap must be smaller than chunk_size"
             )
         return self
+
+
+class IngestedDocument(BaseModel):
+    model_config = ConfigDict(
+        frozen=True,
+    )
+
+    path: Path
+
+    content: str
+
+    @computed_field
+    @property
+    def char_count(self) -> int:
+        return len(self.content)
+
+
+class IngestionFailure(BaseModel):
+    model_config = ConfigDict(
+        frozen=True,
+    )
+
+    path: Path
+
+    error_type: str
+
+    message: str
+
+    @classmethod
+    def from_exception(
+        cls,
+        path: Path,
+        exc: DocumentError,
+    ) -> IngestionFailure:
+        return cls(
+            path=path,
+            error_type=type(exc).__name__,
+            message=exc.message,
+        )
+
+
+class IngestionResult(BaseModel):
+    documents: list[IngestedDocument] = Field(
+        default_factory=list,
+    )
+
+    failures: list[IngestionFailure] = Field(
+        default_factory=list,
+    )
+
+    @computed_field
+    @property
+    def ok(self) -> bool:
+        return not self.failures
