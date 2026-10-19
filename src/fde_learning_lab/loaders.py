@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import ClassVar, Protocol, runtime_checkable
-
+from collections.abc import Iterator
+from typing import Protocol
 from fde_learning_lab.exceptions import (
     DocumentNotFoundError,
     DocumentReadError,
@@ -88,6 +89,33 @@ class MockLoader:
     def load(self, path: str | Path) -> str:
         self.calls.append(Path(path))
         return self.content
+
+class StreamingDocumentLoader(Protocol):
+    def iter_lines(self, path: Path) -> Iterator[str]:
+        ...
+
+
+class StreamingTextLoader:
+    def iter_lines(self, path: Path) -> Iterator[str]:
+        if not path.is_file():
+            raise DocumentNotFoundError(
+                f"File not found: {path}"
+            )
+
+        if path.suffix.lower() != ".txt":
+            raise UnsupportedDocumentError(
+                f"Unsupported file: {path}"
+            )
+
+        try:
+            with path.open("r", encoding="utf-8") as file:
+                for line in file:
+                    yield line.rstrip("\r\n")
+
+        except (OSError, UnicodeError) as exc:
+            raise DocumentReadError(
+                f"Failed to read: {path}"
+            ) from exc
 
 
 if __name__ == "__main__":

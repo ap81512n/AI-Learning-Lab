@@ -4,15 +4,28 @@ All Pydantic models come from models.py; this module only holds behavior.
 """
 
 from __future__ import annotations
-
 from pathlib import Path
 from typing import ClassVar, Iterable
-
 from fde_learning_lab.exceptions import DocumentError
 from fde_learning_lab.loaders import DocumentLoader
 from fde_learning_lab.models import IngestedDocument, IngestionFailure, IngestionResult
+from collections.abc import Iterator
+from pathlib import Path
+from fde_learning_lab.loaders import StreamingDocumentLoader
 
 
+class StreamingIngestionService:
+    def __init__(self, loader: StreamingDocumentLoader):
+        self.loader = loader
+
+    def iter_ingest(self, file_path: str | Path) -> Iterator[str]:
+        path = Path(file_path)
+
+        for line in self.loader.iter_lines(path):
+            cleaned = line.strip()
+
+            if cleaned:
+                yield cleaned
 
 
 class IngestionService:
