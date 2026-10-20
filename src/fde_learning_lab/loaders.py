@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import ClassVar, Protocol, runtime_checkable
 from collections.abc import Iterator
-from typing import Protocol
 from fde_learning_lab.exceptions import (
     DocumentNotFoundError,
     DocumentReadError,
