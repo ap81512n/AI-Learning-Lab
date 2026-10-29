@@ -18,3 +18,8 @@ wheels/
 
 # Uploaded documents and local metadata
 data/uploads/
+
+# Pytest coverage reports
+.coverage
+.coverage.*
+htmlcov/
