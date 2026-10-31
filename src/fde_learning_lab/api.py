@@ -10,6 +10,7 @@ from fastapi import FastAPI, HTTPException, Path as PathParameter, status
 from pydantic import BaseModel, Field
 from fde_learning_lab.db import DocumentRecord, DocumentStore
 from fastapi.middleware.cors import CORSMiddleware
+from fde_learning_lab.graphql_api import graphql_router
 from fde_learning_lab.upload_api import (
     router as upload_router,
 )
@@ -71,6 +72,8 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
         title="Document Q&A API",
         version="0.1.0",
     )
+
+    application.include_router(graphql_router, prefix="/graphql")
 
     application.add_middleware(
     CORSMiddleware,
