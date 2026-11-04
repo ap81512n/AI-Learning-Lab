@@ -10,6 +10,7 @@ from fastapi import FastAPI, HTTPException, Path as PathParameter, status
 from pydantic import BaseModel, Field
 from fde_learning_lab.db import DocumentRecord, DocumentStore
 from fastapi.middleware.cors import CORSMiddleware
+from fde_learning_lab.postgres_metadata import router as metadata_router
 from fde_learning_lab.graphql_api import graphql_router
 from fde_learning_lab.upload_api import (
     router as upload_router,
@@ -74,6 +75,7 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
     )
 
     application.include_router(graphql_router, prefix="/graphql")
+    application.include_router(metadata_router)
 
     application.add_middleware(
     CORSMiddleware,

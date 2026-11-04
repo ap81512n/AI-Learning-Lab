@@ -1,0 +1,43 @@
+
+name: fde-learning-lab
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: fde-learning-lab:day016
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      FDE_DB_PATH: /app/data/documents.sqlite3
+      FDE_UPLOAD_DIR: /app/data/uploads
+      POSTGRES_HOST: db
+      POSTGRES_DB: ${POSTGRES_DB:-fde_lab}
+      POSTGRES_USER: ${POSTGRES_USER:-fde_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - app_data:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-fde_lab}
+      POSTGRES_USER: ${POSTGRES_USER:-fde_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+volumes:
+  app_data:
+  pg_data:
