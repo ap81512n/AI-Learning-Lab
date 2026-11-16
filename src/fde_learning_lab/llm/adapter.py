@@ -1,3 +1,4 @@
+"""LLM provider adapter with usage and cost tracking."""
 
 import logging
 import os
@@ -5,12 +6,13 @@ from dataclasses import dataclass
 from time import perf_counter
 from typing import Protocol
 
-from openai import APIError, OpenAI
-
-logger = logging.getLogger(__name__)
 from dotenv import load_dotenv
+from openai import APIError, OpenAI, OpenAIError
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
+
 
 @dataclass(frozen=True)
 class LLMResult:
@@ -27,9 +29,7 @@ class ModelCallError(Exception):
 
 
 class ModelAdapter(Protocol):
-    def generate(
-        self, *, instructions: str, prompt: str
-    ) -> LLMResult: ...
+    def generate(self, *, instructions: str, prompt: str) -> LLMResult: ...
 
 
 class OpenAIModelAdapter:
@@ -47,28 +47,27 @@ class OpenAIModelAdapter:
         self.model = model
         self.input_rate = input_rate
         self.output_rate = output_rate
-        self.client = (
-            client if client is not None
-            else OpenAI(timeout=20.0, max_retries=2)
-        )
+        # Delay SDK initialization so non-LLM API routes can run without
+        # requiring credentials. The client is created when generate() is used.
+        self.client = client
 
-    def generate(
-        self, *, instructions: str, prompt: str
-    ) -> LLMResult:
+    def generate(self, *, instructions: str, prompt: str) -> LLMResult:
         start = perf_counter()
 
         try:
-            response = self.client.responses.create(
+            client = (
+                self.client
+                if self.client is not None
+                else OpenAI(timeout=20.0, max_retries=2)
+            )
+            response = client.responses.create(
                 model=self.model,
                 instructions=instructions,
                 input=prompt,
             )
-        except APIError as exc:
+        except (APIError, OpenAIError) as exc:
             # Do not log prompts, keys or raw provider errors.
-            logger.warning(
-                "LLM request failed: %s",
-                type(exc).__name__,
-            )
+            logger.warning("LLM request failed: %s", type(exc).__name__)
             raise ModelCallError(
                 "Model provider is temporarily unavailable"
             ) from None
@@ -85,7 +84,8 @@ class OpenAIModelAdapter:
                 (
                     input_tokens * self.input_rate
                     + output_tokens * self.output_rate
-                ) / 1_000_000,
+                )
+                / 1_000_000,
                 8,
             )
 
@@ -106,17 +106,12 @@ class OpenAIModelAdapter:
             output_tokens=output_tokens,
             latency_ms=latency_ms,
             estimated_cost_usd=cost,
-            
         )
 
 
 def build_model_adapter() -> OpenAIModelAdapter:
     return OpenAIModelAdapter(
         model=os.environ["OPENAI_MODEL"],
-        input_rate=float(
-            os.environ["LLM_INPUT_USD_PER_1M"]
-        ),
-        output_rate=float(
-            os.environ["LLM_OUTPUT_USD_PER_1M"]
-        ),
+        input_rate=float(os.environ["LLM_INPUT_USD_PER_1M"]),
+        output_rate=float(os.environ["LLM_OUTPUT_USD_PER_1M"]),
     )

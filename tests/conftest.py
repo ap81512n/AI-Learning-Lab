@@ -1,14 +1,19 @@
 from collections.abc import Iterator
 from pathlib import Path
-
+import os
 import pytest
 from fastapi.testclient import TestClient
-
+# Placeholder for local testing only
+os.environ.setdefault("OPENAI_API_KEY", "pytest-dummy-key")
 from fde_learning_lab.api import create_app
 from fde_learning_lab.upload_api import (
     UploadSettings,
     get_upload_settings,
 )
+
+
+
+
 
 
 @pytest.fixture

@@ -1,4 +1,3 @@
-
 """Day 017: simulate one-step LLM token sampling with toy logits."""
 
 from collections import Counter
@@ -116,4 +115,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-uv run python -m labs.token_sampling

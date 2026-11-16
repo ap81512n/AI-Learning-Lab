@@ -7,6 +7,8 @@ services:
       context: .
       dockerfile: Dockerfile
     image: fde-learning-lab:day016
+    # Match the macOS host user so bind-mounted data stays user-writable.
+    user: "${LOCAL_UID:-501}:${LOCAL_GID:-20}"
     ports:
       - "127.0.0.1:8000:8000"
     environment:
@@ -15,9 +17,9 @@ services:
       POSTGRES_HOST: db
       POSTGRES_DB: ${POSTGRES_DB:-fde_lab}
       POSTGRES_USER: ${POSTGRES_USER:-fde_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-dev-only-change-me}
     volumes:
-      - app_data:/app/data
+      - ./data:/app/data
     depends_on:
       db:
         condition: service_healthy
@@ -27,7 +29,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-fde_lab}
       POSTGRES_USER: ${POSTGRES_USER:-fde_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-dev-only-change-me}
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
@@ -39,5 +41,4 @@ services:
       retries: 12
 
 volumes:
-  app_data:
   pg_data:
